@@ -1,6 +1,8 @@
-package com.example.costcalculator
+package com.example.costcalculator.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.example.costcalculator.data.Expense
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,5 +35,11 @@ class ExpenseViewModel : ViewModel() {
             Expense(6L, 80.00, "Транспорт", "Поповнення проїзного"),
             Expense(7L, 500.00, "Одяг", "Нова футболка")
         )
+    }
+
+    fun getExpenseById(id: Long): Expense? {
+        // Ми шукаємо у поточному списку витрат ту,
+        // у якої id збігається з потрібним.
+        return expenses.value.find { it.id == id }
     }
 }
