@@ -17,6 +17,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.costcalculator.ui.theme.CostCalculatorTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,21 +81,14 @@ fun ExpenseList(expenses: List<Expense>, modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseTrackerScreen(modifier: Modifier = Modifier) {
-    // Наші тестові дані залишаються тут
-    val expenses = listOf(
-        Expense(1L, 75.50, "Продукти", "Хліб, молоко"),
-        Expense(2L, 1200.00, "Оренда", "Платіж за квартиру"),
-        Expense(3L, 40.00, "Транспорт", "Квиток на автобус"),
-        Expense(4L, 350.25, "Розваги", "Квитки в кіно"),
-        Expense(5L, 150.00, "Кафе", "Кава та десерт"),
-        Expense(6L, 80.00, "Транспорт", "Поповнення проїзного"),
-        Expense(7L, 500.00, "Одяг", "Нова футболка")
-    )
+fun ExpenseTrackerScreen(
+    modifier: Modifier = Modifier,
+    viewModel: ExpenseViewModel = viewModel()
+) {
+    val expenses by viewModel.expenses.collectAsState()
 
-    // Ми повертаємо topBar всередину нашого Scaffold
     Scaffold(
-        modifier = modifier, // Modifier тут залишається
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("Калькулятор витрат") },
@@ -103,7 +99,6 @@ fun ExpenseTrackerScreen(modifier: Modifier = Modifier) {
             )
         }
     ) { innerPadding ->
-        // Контент залишається таким самим
         ExpenseList(
             expenses = expenses,
             modifier = Modifier.padding(innerPadding)
