@@ -27,6 +27,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ExpenseTrackerScreenPreview() {
     CostCalculatorTheme {
-        ExpenseTrackerScreen(onExpenseClick = { })
+        ExpenseTrackerScreen(
+            onExpenseClick = { }, // Для кліку на елемент нічого не робимо
+            onAddExpenseClick = { }  // Для кліку на "+" теж нічого не робимо
+        )
     }
 }

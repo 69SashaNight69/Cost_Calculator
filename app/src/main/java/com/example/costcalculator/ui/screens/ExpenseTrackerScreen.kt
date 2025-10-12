@@ -1,19 +1,15 @@
 package com.example.costcalculator.ui.screens
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.costcalculator.ui.components.ExpenseList
-
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,7 +17,8 @@ import com.example.costcalculator.viewmodel.ExpenseViewModel
 fun ExpenseTrackerScreen(
     modifier: Modifier = Modifier,
     viewModel: ExpenseViewModel = viewModel(),
-    onExpenseClick: (Long) -> Unit
+    onExpenseClick: (Long) -> Unit,
+    onAddExpenseClick: () -> Unit // ДОДАНО: параметр для кліку на "+"
 ) {
     val expenses by viewModel.expenses.collectAsState()
 
@@ -29,18 +26,22 @@ fun ExpenseTrackerScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Калькулятор витрат") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
+                title = { Text("Калькулятор витрат") }
             )
+        },
+        floatingActionButton = { // ДОДАНО: плаваюча кнопка дії
+            FloatingActionButton(onClick = onAddExpenseClick) {
+                Icon(Icons.Filled.Add, contentDescription = "Додати витрату")
+            }
         }
     ) { innerPadding ->
         ExpenseList(
             expenses = expenses,
             modifier = Modifier.padding(innerPadding),
-            onExpenseClick = onExpenseClick
+            onExpenseClick = onExpenseClick,
+            onExpenseSwiped = { expense -> // ДОДАНО: обробка свайпу
+                viewModel.deleteExpense(expense)
+            }
         )
     }
 }

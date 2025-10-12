@@ -1,45 +1,54 @@
 package com.example.costcalculator.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.costcalculator.data.AppDatabase
 import com.example.costcalculator.data.Expense
-
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.example.costcalculator.data.ExpenseDao
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class ExpenseViewModel : ViewModel() {
+class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 1. Приватний, змінюваний StateFlow.
-    // Тільки ViewModel може змінювати цей список.
-    private val _expenses = MutableStateFlow<List<Expense>>(emptyList())
+    private val expenseDao: ExpenseDao
 
-    // 2. Публічний, незмінюваний StateFlow.
-    // UI може тільки читати дані з нього.
-    val expenses: StateFlow<List<Expense>> = _expenses.asStateFlow()
-
-    // 3. Блок init викликається при створенні ViewModel.
-    // Тут ми завантажуємо наші початкові дані.
     init {
-        loadExpenses()
+        val database = AppDatabase.getDatabase(application)
+        expenseDao = database.expenseDao()
     }
 
-    private fun loadExpenses() {
-        // Поки що ми використовуємо ті ж самі тестові дані.
-        // У майбутньому тут буде завантаження з бази даних.
-        _expenses.value = listOf(
-            Expense(1L, 75.50, "Продукти", "Хліб, молоко"),
-            Expense(2L, 1200.00, "Оренда", "Платіж за квартиру"),
-            Expense(3L, 40.00, "Транспорт", "Квиток на автобус"),
-            Expense(4L, 350.25, "Розваги", "Квитки в кіно"),
-            Expense(5L, 150.00, "Кафе", "Кава та десерт"),
-            Expense(6L, 80.00, "Транспорт", "Поповнення проїзного"),
-            Expense(7L, 500.00, "Одяг", "Нова футболка")
+    // Тепер дані беруться напряму з бази даних і є StateFlow
+    val expenses: StateFlow<List<Expense>> = expenseDao.getAllExpenses()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
+
+    // Функція для додавання нової витрати
+    fun addExpense(expense: Expense) {
+        viewModelScope.launch {
+            expenseDao.insert(expense)
+        }
     }
 
-    fun getExpenseById(id: Long): Expense? {
-        // Ми шукаємо у поточному списку витрат ту,
-        // у якої id збігається з потрібним.
-        return expenses.value.find { it.id == id }
+    // Функція для видалення витрати
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            expenseDao.delete(expense)
+        }
+    }
+
+    fun updateExpense(expense: Expense) {
+        viewModelScope.launch {
+            expenseDao.update(expense)
+        }
+    }
+
+    suspend fun getExpenseById(id: Long): Expense? {
+        return expenseDao.getExpenseById(id)
     }
 }

@@ -9,17 +9,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.costcalculator.data.Expense // Імпортуйте ваш data class
 import com.example.costcalculator.utils.toCurrencyFormat // Імпортуйте вашу функцію
+import androidx.compose.material.icons.filled.Edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseDetailScreen(
     expense: Expense,
-    onNavigateBack: () -> Unit // Лямбда для повернення назад
+    onNavigateBack: () -> Unit,
+    onEdit: () -> Unit // Лямбда для повернення назад
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Деталі витрати") },
+                actions = { // Додаємо кнопку "Редагувати"
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Редагувати")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
