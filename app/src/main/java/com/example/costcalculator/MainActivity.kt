@@ -28,8 +28,9 @@ class MainActivity : ComponentActivity() {
 fun ExpenseTrackerScreenPreview() {
     CostCalculatorTheme {
         ExpenseTrackerScreen(
-            onExpenseClick = { }, // Для кліку на елемент нічого не робимо
-            onAddExpenseClick = { }  // Для кліку на "+" теж нічого не робимо
+            onExpenseClick = { },
+            onAddExpenseClick = { },
+            onManageCategoriesClick = { }
         )
     }
 }

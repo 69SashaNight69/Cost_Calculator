@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.costcalculator.ui.components.ExpenseList
 import com.example.costcalculator.viewmodel.ExpenseViewModel
+import androidx.compose.material.icons.filled.Settings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,7 +19,8 @@ fun ExpenseTrackerScreen(
     modifier: Modifier = Modifier,
     viewModel: ExpenseViewModel = viewModel(),
     onExpenseClick: (Long) -> Unit,
-    onAddExpenseClick: () -> Unit // ДОДАНО: параметр для кліку на "+"
+    onAddExpenseClick: () -> Unit,
+    onManageCategoriesClick: () -> Unit
 ) {
     val expenses by viewModel.expenses.collectAsState()
 
@@ -26,7 +28,12 @@ fun ExpenseTrackerScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Калькулятор витрат") }
+                title = { Text("Калькулятор витрат") },
+                actions = { // Додаємо секцію actions
+                    IconButton(onClick = onManageCategoriesClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Налаштування категорій")
+                    }
+                }
             )
         },
         floatingActionButton = { // ДОДАНО: плаваюча кнопка дії
