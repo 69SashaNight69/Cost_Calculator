@@ -15,6 +15,7 @@ import com.example.costcalculator.ui.screens.AddEditExpenseScreen
 import com.example.costcalculator.ui.screens.CategoryManagementScreen
 import com.example.costcalculator.ui.screens.ExpenseDetailScreen
 import com.example.costcalculator.ui.screens.ExpenseTrackerScreen
+import com.example.costcalculator.ui.screens.GroupManagementScreen
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 import com.example.costcalculator.viewmodel.ExpenseViewModelFactory
 
@@ -24,7 +25,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
     // ЗМІНА 2: Створюємо всі залежності прямо тут
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
-    val repository = ExpenseRepository(database.expenseDao(), database.categoryDao())
+    val repository = ExpenseRepository(database.expenseDao(), database.categoryDao(), database.groupDao())
     val viewModelFactory = ExpenseViewModelFactory(repository)
 
     // Тепер viewModel буде створюватися за допомогою нашої фабрики
@@ -49,6 +50,9 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 },
                 onManageCategoriesClick = {
                     navController.navigate("category_management")
+                },
+                onManageGroupsClick = { // Передаємо нову дію
+                    navController.navigate("group_management")
                 }
             )
         }
@@ -60,17 +64,23 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
             var expense by remember { mutableStateOf<Expense?>(null) }
+            var groupName by remember { mutableStateOf<String?>(null) }
 
             // Ця частина залишається без змін, вона працює з viewModel
             LaunchedEffect(key1 = expenseId) {
                 if (expenseId != null) {
                     expense = viewModel.getExpenseById(expenseId)
+                    // ДОДАНО: завантажуємо назву групи, якщо є groupId
+                    expense?.groupId?.let {
+                        groupName = viewModel.getGroupNameById(it)
+                    }
                 }
             }
 
             if (expense != null) {
                 ExpenseDetailScreen(
                     expense = expense!!,
+                    groupName = groupName, // ДОДАНО: передаємо назву в UI
                     onNavigateBack = { navController.popBackStack() },
                     onEdit = {
                         navController.navigate("edit_expense?expenseId=${expense!!.id}")
@@ -92,6 +102,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
             var isLoading by remember { mutableStateOf(true) }
 
             val categories by viewModel.categories.collectAsState()
+            val groups by viewModel.groups.collectAsState()
 
             LaunchedEffect(key1 = expenseId) {
                 if (expenseId != null && expenseId != -1L) {
@@ -104,6 +115,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 AddEditExpenseScreen(
                     expense = expense,
                     categories = categories,
+                    groups = groups,
                     onSave = { expenseToSave ->
                         if (expenseToSave.id == 0L) {
                             viewModel.addExpense(expenseToSave)
@@ -121,6 +133,12 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
         composable("category_management") {
             CategoryManagementScreen(
                 viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("group_management") {
+            GroupManagementScreen(
+                viewModel = viewModel(factory = viewModelFactory),
                 onNavigateBack = { navController.popBackStack() }
             )
         }

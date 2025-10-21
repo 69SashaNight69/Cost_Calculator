@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Edit
 @Composable
 fun ExpenseDetailScreen(
     expense: Expense,
+    groupName: String?,
     onNavigateBack: () -> Unit,
     onEdit: () -> Unit // Лямбда для повернення назад
 ) {
@@ -48,6 +49,14 @@ fun ExpenseDetailScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Сума: ${expense.amount.toCurrencyFormat()}", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(16.dp))
+            if (groupName != null) {
+                Text(
+                    text = "Група: $groupName",
+                    style = MaterialTheme.typography.titleMedium // Стиль як для підзаголовка
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             expense.description?.let {
                 Text(text = "Опис: $it", style = MaterialTheme.typography.bodyMedium)
             }

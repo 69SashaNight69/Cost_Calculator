@@ -30,7 +30,8 @@ fun ExpenseTrackerScreenPreview() {
         ExpenseTrackerScreen(
             onExpenseClick = { },
             onAddExpenseClick = { },
-            onManageCategoriesClick = { }
+            onManageCategoriesClick = { },
+            onManageGroupsClick = { }
         )
     }
 }

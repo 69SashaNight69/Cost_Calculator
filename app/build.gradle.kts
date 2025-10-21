@@ -74,6 +74,7 @@ dependencies {
 
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
 
     // Тестування
     testImplementation(libs.junit)

@@ -4,12 +4,15 @@ import com.example.costcalculator.data.Category
 import com.example.costcalculator.data.CategoryDao
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.data.ExpenseDao
+import com.example.costcalculator.data.ExpenseGroup
+import com.example.costcalculator.data.ExpenseGroupDao
 import kotlinx.coroutines.flow.Flow
 
 // Репозиторій приймає DAO як параметри
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
-    private val categoryDao: CategoryDao
+    private val categoryDao: CategoryDao,
+    private val groupDao: ExpenseGroupDao
 ) {
     // --- Операції з Витратами ---
 
@@ -39,5 +42,16 @@ class ExpenseRepository(
 
     suspend fun deleteCategory(category: Category) {
         categoryDao.delete(category)
+    }
+
+    // --- Операції з Групами ---
+    fun getAllGroups(): Flow<List<ExpenseGroup>> = groupDao.getAllGroups()
+
+    suspend fun insertGroup(group: ExpenseGroup) {
+        groupDao.insert(group)
+    }
+
+    suspend fun deleteGroup(group: ExpenseGroup) {
+        groupDao.delete(group)
     }
 }

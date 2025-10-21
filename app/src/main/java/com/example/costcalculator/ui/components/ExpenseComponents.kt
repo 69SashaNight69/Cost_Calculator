@@ -13,11 +13,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.costcalculator.data.Expense
+import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.utils.toCurrencyFormat
 
 @Composable
 fun ExpenseItem(
     expense: Expense,
+    group: ExpenseGroup?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -32,6 +34,13 @@ fun ExpenseItem(
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
+        if (group != null) {
+            Text(
+                text = "Група: ${group.name}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
         expense.description?.takeIf { it.isNotBlank() }?.let {
             Text(
                 text = it,
@@ -50,6 +59,7 @@ fun ExpenseItem(
 @Composable
 fun ExpenseList(
     expenses: List<Expense>,
+    groups: List<ExpenseGroup>,
     modifier: Modifier = Modifier,
     onExpenseClick: (Long) -> Unit,
     onExpenseSwiped: (Expense) -> Unit // ДОДАНО: параметр для свайпу
@@ -60,6 +70,7 @@ fun ExpenseList(
             key = { it.id } // Ключ для правильної анімації
         ) { expense ->
             // ДОДАНО: обгортка для свайпу
+            val group = groups.find { it.id == expense.groupId }
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = {
                     if (it == SwipeToDismissBoxValue.EndToStart) { // Свайп зправа наліво
@@ -75,13 +86,12 @@ fun ExpenseList(
                 state = dismissState,
                 enableDismissFromStartToEnd = false, // Вимкнути свайп зліва направо
                 backgroundContent = {
-                    // Тут можна додати червоний фон з іконкою смітника,
-                    // але для простоти поки що залишимо порожнім.
                 }
             ) {
                 // Наш старий добрий ExpenseItem
                 ExpenseItem(
                     expense = expense,
+                    group = group,
                     onClick = { onExpenseClick(expense.id) }
                 )
             }
