@@ -1,12 +1,11 @@
 package com.example.costcalculator.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -14,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.costcalculator.data.Category
+import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.ui.components.ExpenseList
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 
@@ -25,7 +26,8 @@ fun ExpenseTrackerScreen(
     onExpenseClick: (Long) -> Unit,
     onAddExpenseClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
-    onManageGroupsClick: () -> Unit
+    onManageGroupsClick: () -> Unit, // <-- Новий параметр
+    onAnalyticsClick: () -> Unit      // <-- Новий параметр
 ) {
     val expenses by viewModel.expenses.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -39,9 +41,15 @@ fun ExpenseTrackerScreen(
             TopAppBar(
                 title = { Text("Калькулятор витрат") },
                 actions = {
+                    // Кнопка для аналітики
+                    IconButton(onClick = onAnalyticsClick) {
+                        Icon(Icons.Default.Analytics, contentDescription = "Аналітика")
+                    }
+                    // Кнопка для груп
                     IconButton(onClick = onManageGroupsClick) {
                         Icon(Icons.Default.Group, contentDescription = "Налаштування груп")
                     }
+                    // Кнопка для категорій
                     IconButton(onClick = onManageCategoriesClick) {
                         Icon(Icons.Default.Settings, contentDescription = "Налаштування категорій")
                     }
@@ -55,14 +63,11 @@ fun ExpenseTrackerScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // Нова секція з випадаючими списками для фільтрації
+            // Фільтри
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Фільтр за категоріями
                 FilterDropdown(
                     modifier = Modifier.weight(1f),
                     label = "Категорія",
@@ -70,7 +75,6 @@ fun ExpenseTrackerScreen(
                     selectedItemId = selectedCategoryId,
                     onItemSelected = { viewModel.selectCategory(it) }
                 )
-                // Фільтр за групами
                 FilterDropdown(
                     modifier = Modifier.weight(1f),
                     label = "Група",
@@ -80,22 +84,16 @@ fun ExpenseTrackerScreen(
                 )
             }
 
-            // Список витрат, який тепер отримує і список груп
             ExpenseList(
                 expenses = expenses,
-                groups = groups, // Передаємо список груп для відображення назв
+                groups = groups,
                 onExpenseClick = onExpenseClick,
-                onExpenseSwiped = { expense ->
-                    viewModel.deleteExpense(expense)
-                }
+                onExpenseSwiped = { expense -> viewModel.deleteExpense(expense) }
             )
         }
     }
 }
 
-/**
- * Перевикористовуваний Composable-компонент для випадаючого списку-фільтра.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterDropdown(
@@ -119,15 +117,12 @@ fun FilterDropdown(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            // Пункт "Всі" для скидання фільтру
             DropdownMenuItem(
                 text = { Text("Всі") },
                 onClick = {
@@ -135,7 +130,6 @@ fun FilterDropdown(
                     expanded = false
                 }
             )
-            // Решта пунктів
             items.forEach { (name, id) ->
                 DropdownMenuItem(
                     text = { Text(name) },

@@ -3,6 +3,7 @@ package com.example.costcalculator.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.costcalculator.data.Category
+import com.example.costcalculator.data.ChartData
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.data.repository.ExpenseRepository
@@ -19,6 +20,24 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     private val _selectedGroupId = MutableStateFlow<Long?>(null)
     val selectedGroupId: StateFlow<Long?> = _selectedGroupId.asStateFlow()
+
+    val chartData: StateFlow<List<ChartData>> = repository.getAllExpenses()
+        .map { expenses ->
+            // Логіка залишається такою ж, але створюємо наш власний об'єкт
+            expenses
+                .groupBy { it.category }
+                .map { (category, expensesList) ->
+                    ChartData(
+                        value = expensesList.sumOf { it.amount }.toFloat(),
+                        label = category
+                    )
+                }
+                .filter { it.value > 0 }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // Дані тепер надходять з репозиторію
     val expenses: StateFlow<List<Expense>> = repository.getAllExpenses()

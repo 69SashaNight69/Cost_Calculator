@@ -12,6 +12,7 @@ import com.example.costcalculator.data.AppDatabase
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.data.repository.ExpenseRepository
 import com.example.costcalculator.ui.screens.AddEditExpenseScreen
+import com.example.costcalculator.ui.screens.AnalyticsScreen
 import com.example.costcalculator.ui.screens.CategoryManagementScreen
 import com.example.costcalculator.ui.screens.ExpenseDetailScreen
 import com.example.costcalculator.ui.screens.ExpenseTrackerScreen
@@ -53,6 +54,9 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 },
                 onManageGroupsClick = { // Передаємо нову дію
                     navController.navigate("group_management")
+                },
+                onAnalyticsClick = { // <-- Передаємо дію для аналітики
+                    navController.navigate("analytics")
                 }
             )
         }
@@ -129,6 +133,13 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
             }
         }
 
+        composable("analytics") {
+            AnalyticsScreen(
+                viewModel = viewModel, // <-- Переконайтесь, що viewModel передається тут
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         // Маршрут №4: Управління категоріями
         composable("category_management") {
             CategoryManagementScreen(
@@ -138,7 +149,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
         }
         composable("group_management") {
             GroupManagementScreen(
-                viewModel = viewModel(factory = viewModelFactory),
+                viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
