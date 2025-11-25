@@ -21,7 +21,39 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     private val _selectedGroupId = MutableStateFlow<Long?>(null)
     val selectedGroupId: StateFlow<Long?> = _selectedGroupId.asStateFlow()
 
-    val chartData: StateFlow<List<ChartData>> = repository.getAllExpenses()
+    private val allExpensesFlow = repository.getAllExpenses()
+
+    val totalSpent: StateFlow<Double> = allExpensesFlow
+        .map { expenses -> expenses.sumOf { it.amount } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
+
+    val transactionCount: StateFlow<Int> = allExpensesFlow
+        .map { expenses -> expenses.size }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val averageTransaction: StateFlow<Double> = allExpensesFlow
+        .map { expenses ->
+            if (expenses.isNotEmpty()) {
+                expenses.sumOf { it.amount } / expenses.size
+            } else {
+                0.0
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
+
+    val chartData: StateFlow<List<ChartData>> = allExpensesFlow
         .map { expenses ->
             // Логіка залишається такою ж, але створюємо наш власний об'єкт
             expenses
