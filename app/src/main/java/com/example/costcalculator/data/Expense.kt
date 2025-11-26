@@ -10,5 +10,7 @@ data class Expense(
     val amount: Double,
     val category: String,
     val description: String?,
-    val groupId: Long?
+    val groupId: Long?,
+    val latitude: Double?,
+    val longitude: Double?
 )

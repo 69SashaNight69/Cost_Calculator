@@ -53,6 +53,16 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
             initialValue = 0.0
         )
 
+    val expensesWithLocation: StateFlow<List<Expense>> = allExpensesFlow
+        .map { expenses ->
+            expenses.filter { it.latitude != null && it.longitude != null }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val chartData: StateFlow<List<ChartData>> = allExpensesFlow
         .map { expenses ->
             // Логіка залишається такою ж, але створюємо наш власний об'єкт

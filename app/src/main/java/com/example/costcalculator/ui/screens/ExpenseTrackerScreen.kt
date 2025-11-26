@@ -17,6 +17,7 @@ import com.example.costcalculator.data.Category
 import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.ui.components.ExpenseList
 import com.example.costcalculator.viewmodel.ExpenseViewModel
+import androidx.compose.material.icons.filled.Map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +27,9 @@ fun ExpenseTrackerScreen(
     onExpenseClick: (Long) -> Unit,
     onAddExpenseClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
-    onManageGroupsClick: () -> Unit, // <-- Новий параметр
-    onAnalyticsClick: () -> Unit      // <-- Новий параметр
+    onManageGroupsClick: () -> Unit,
+    onAnalyticsClick: () -> Unit,
+    onMapClick: () -> Unit
 ) {
     val expenses by viewModel.expenses.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -41,6 +43,9 @@ fun ExpenseTrackerScreen(
             TopAppBar(
                 title = { Text("Калькулятор витрат") },
                 actions = {
+                    IconButton(onClick = onMapClick) {
+                        Icon(Icons.Default.Map, contentDescription = "Карта")
+                    }
                     // Кнопка для аналітики
                     IconButton(onClick = onAnalyticsClick) {
                         Icon(Icons.Default.Analytics, contentDescription = "Аналітика")

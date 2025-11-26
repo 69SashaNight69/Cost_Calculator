@@ -17,6 +17,7 @@ import com.example.costcalculator.ui.screens.CategoryManagementScreen
 import com.example.costcalculator.ui.screens.ExpenseDetailScreen
 import com.example.costcalculator.ui.screens.ExpenseTrackerScreen
 import com.example.costcalculator.ui.screens.GroupManagementScreen
+import com.example.costcalculator.ui.screens.MapScreen
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 import com.example.costcalculator.viewmodel.ExpenseViewModelFactory
 
@@ -57,6 +58,9 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 },
                 onAnalyticsClick = { // <-- Передаємо дію для аналітики
                     navController.navigate("analytics")
+                },
+                onMapClick = {
+                    navController.navigate("map")
                 }
             )
         }
@@ -135,7 +139,13 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
 
         composable("analytics") {
             AnalyticsScreen(
-                viewModel = viewModel, // <-- Переконайтесь, що viewModel передається тут
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("map") {
+            MapScreen(
+                viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

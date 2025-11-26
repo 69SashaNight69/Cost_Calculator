@@ -1,18 +1,29 @@
 package com.example.costcalculator.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.costcalculator.data.Category
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.data.ExpenseGroup
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.LatLng
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,15 +34,34 @@ fun AddEditExpenseScreen(
     onSave: (Expense) -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    // --- Логіка для геолокації ---
+    val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    var location by remember { mutableStateOf<LatLng?>(null) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)) {
+                getCurrentLocation(fusedLocationClient) { latLng ->
+                    location = latLng
+                }
+            }
+        }
+    )
+
+    // --- Стани для полів вводу ---
     var amount by remember { mutableStateOf(expense?.amount?.toString() ?: "") }
-    var selectedCategory by remember {
-        mutableStateOf(categories.find { it.name == expense?.category } ?: categories.firstOrNull())
-    }
-    // Стан для обраної групи
-    var selectedGroup by remember {
-        mutableStateOf(groups.find { it.id == expense?.groupId })
-    }
+    var selectedCategory by remember { mutableStateOf(categories.find { it.name == expense?.category } ?: categories.firstOrNull()) }
+    var selectedGroup by remember { mutableStateOf(groups.find { it.id == expense?.groupId }) }
     var description by remember { mutableStateOf(expense?.description ?: "") }
+
+    LaunchedEffect(expense) {
+        if (expense?.latitude != null && expense.longitude != null) {
+            location = LatLng(expense.latitude, expense.longitude)
+        }
+    }
 
     val title = if (expense == null) "Додати витрату" else "Редагувати витрату"
 
@@ -43,36 +73,44 @@ fun AddEditExpenseScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        val amountDouble = amount.toDoubleOrNull()
-                        if (amountDouble != null && selectedCategory != null) {
-                            val expenseToSave = expense?.copy(
-                                amount = amountDouble,
-                                category = selectedCategory!!.name,
-                                description = description,
-                                groupId = selectedGroup?.id // ДОДАНО: зберігаємо ID групи
-                            ) ?: Expense(
-                                amount = amountDouble,
-                                category = selectedCategory!!.name,
-                                description = description,
-                                groupId = selectedGroup?.id // ДОДАНО: зберігаємо ID групи
-                            )
-                            onSave(expenseToSave)
-                        }
-                    }) {
-                        Icon(Icons.Filled.Done, contentDescription = "Зберегти")
-                    }
                 }
             )
         },
+        // Змінили кнопку Зберегти на FloatingActionButton для кращого UX
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    val amountDouble = amount.toDoubleOrNull()
+                    if (amountDouble != null && selectedCategory != null) {
+                        val expenseToSave = expense?.copy(
+                            amount = amountDouble,
+                            category = selectedCategory!!.name,
+                            description = description,
+                            groupId = selectedGroup?.id,
+                            latitude = location?.latitude,
+                            longitude = location?.longitude
+                        ) ?: Expense(
+                            amount = amountDouble,
+                            category = selectedCategory!!.name,
+                            description = description,
+                            groupId = selectedGroup?.id,
+                            latitude = location?.latitude,
+                            longitude = location?.longitude
+                        )
+                        onSave(expenseToSave)
+                    }
+                }
+            ) {
+                Icon(Icons.Default.Done, contentDescription = "Зберегти")
+            }
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()), // Додаємо прокрутку
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
@@ -84,12 +122,9 @@ fun AddEditExpenseScreen(
                 singleLine = true
             )
 
-            // Список для Категорій (без змін)
+            // Список для Категорій
             var categoryExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = categoryExpanded,
-                onExpandedChange = { categoryExpanded = !categoryExpanded }
-            ) {
+            ExposedDropdownMenuBox(expanded = categoryExpanded, onExpandedChange = { categoryExpanded = !categoryExpanded }) {
                 OutlinedTextField(
                     value = selectedCategory?.name ?: "Оберіть категорію*",
                     onValueChange = {},
@@ -98,10 +133,7 @@ fun AddEditExpenseScreen(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-                ExposedDropdownMenu(
-                    expanded = categoryExpanded,
-                    onDismissRequest = { categoryExpanded = false }
-                ) {
+                ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
                     categories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.name) },
@@ -114,40 +146,27 @@ fun AddEditExpenseScreen(
                 }
             }
 
-            // ДОДАНО: Новий випадаючий список для Груп
+            // Список для Груп
             var groupExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = groupExpanded,
-                onExpandedChange = { groupExpanded = !groupExpanded }
-            ) {
+            ExposedDropdownMenuBox(expanded = groupExpanded, onExpandedChange = { groupExpanded = !groupExpanded }) {
                 OutlinedTextField(
-                    value = selectedGroup?.name ?: "Без групи", // Текст за замовчуванням
+                    value = selectedGroup?.name ?: "Без групи",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Група (опціонально)") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-                ExposedDropdownMenu(
-                    expanded = groupExpanded,
-                    onDismissRequest = { groupExpanded = false }
-                ) {
-                    // Додаємо пункт, щоб можна було скасувати вибір групи
-                    DropdownMenuItem(
-                        text = { Text("Без групи") },
-                        onClick = {
-                            selectedGroup = null
-                            groupExpanded = false
-                        }
-                    )
+                ExposedDropdownMenu(expanded = groupExpanded, onDismissRequest = { groupExpanded = false }) {
+                    DropdownMenuItem(text = { Text("Без групи") }, onClick = {
+                        selectedGroup = null
+                        groupExpanded = false
+                    })
                     groups.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group.name) },
-                            onClick = {
-                                selectedGroup = group
-                                groupExpanded = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(group.name) }, onClick = {
+                            selectedGroup = group
+                            groupExpanded = false
+                        })
                     }
                 }
             }
@@ -158,6 +177,55 @@ fun AddEditExpenseScreen(
                 label = { Text("Опис") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Блок для геолокації
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Text(
+                        text = if (location != null) "Місцезнаходження додано" else "Додати місцезнаходження?",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    val currentLocation = location
+                    if (currentLocation != null) {
+                        Text(
+                            text = "Lat: %.4f, Lng: %.4f".format(currentLocation.latitude, currentLocation.longitude),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = "Додати місцезнаходження",
+                        tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Допоміжна функція для отримання координат (поза @Composable функцією)
+@SuppressLint("MissingPermission")
+private fun getCurrentLocation(fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient, onLocationFetched: (LatLng) -> Unit) {
+    fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+        if (loc != null) {
+            onLocationFetched(LatLng(loc.latitude, loc.longitude))
         }
     }
 }
