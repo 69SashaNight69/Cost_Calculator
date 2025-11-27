@@ -18,9 +18,10 @@ import kotlinx.coroutines.Dispatchers
 // ЗМІНА 1: Конструктор тепер приймає репозиторій
 class ExpenseViewModel(
     private val repository: ExpenseRepository,
-    private val bluetoothAdapter: BluetoothAdapter? // ДОДАНО
+    private val bluetoothAdapter: BluetoothAdapter?
 ) : ViewModel() {
 
+    private var lastDeletedExpense: Expense? = null
     // ЗМІНА 2: Ми прибрали всю логіку з DAO та init {}
     private val _bluetoothController = bluetoothAdapter?.let { BluetoothController(it) }
 
@@ -167,6 +168,7 @@ class ExpenseViewModel(
 
     fun deleteExpense(expense: Expense) {
         viewModelScope.launch {
+            lastDeletedExpense = expense
             repository.deleteExpense(expense)
 
             launch(Dispatchers.IO) {
@@ -204,6 +206,15 @@ class ExpenseViewModel(
 
     suspend fun getExpenseById(id: Long): Expense? {
         return repository.getExpenseById(id)
+    }
+
+    fun undoDelete() {
+        lastDeletedExpense?.let { expense ->
+            viewModelScope.launch {
+                addExpense(expense) // Просто додаємо її назад
+                lastDeletedExpense = null // Очищуємо, щоб не відновити двічі
+            }
+        }
     }
 
     fun addCategory(categoryName: String) = viewModelScope.launch {

@@ -25,6 +25,12 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.example.costcalculator.sensors.ShakeDetector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +51,46 @@ fun ExpenseTrackerScreen(
     val selectedGroupId by viewModel.selectedGroupId.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() } // Для показу повідомлень
     val coroutineScope = rememberCoroutineScope()
+    var showUndoDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Створюємо та керуємо життєвим циклом нашого детектора
+    DisposableEffect(Unit) {
+        val shakeDetector = ShakeDetector(context) {
+            // Цей код виконається, коли телефон струснули
+            showUndoDialog = true
+        }
+        shakeDetector.start()
+
+        onDispose {
+            shakeDetector.stop()
+        }
+    }
+
+    // Діалогове вікно для підтвердження відновлення
+    if (showUndoDialog) {
+        AlertDialog(
+            onDismissRequest = { showUndoDialog = false },
+            title = { Text("Відновити видалену витрату?") },
+            text = { Text("Ви хочете відновити останню видалену транзакцію?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.undoDelete()
+                        showUndoDialog = false
+                    }
+                ) {
+                    Text("Так, відновити")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUndoDialog = false }) {
+                    Text("Скасувати")
+                }
+            }
+        )
+    }
+
 
     // Підписуємось на отримані витрати, щоб показати повідомлення
     LaunchedEffect(key1 = viewModel) {
