@@ -90,4 +90,16 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+// --- CAMERAX: ВСІ ВЕРСІЇ ВКАЗАНО ВРУЧНУ ---
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:${cameraxVersion}")
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:1.4.0-beta01")
+    implementation("androidx.camera:camera-extensions:1.4.0-beta01")
+    implementation("androidx.camera:camera-compose:1.5.1")
+
 }

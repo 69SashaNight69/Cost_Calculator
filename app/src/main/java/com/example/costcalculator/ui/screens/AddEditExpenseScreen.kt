@@ -27,6 +27,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.CancellationTokenSource
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,9 @@ fun AddEditExpenseScreen(
     categories: List<Category>,
     groups: List<ExpenseGroup>,
     onSave: (Expense) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    navController: NavController,
+    qrResult: String?
 ) {
     // --- Логіка для геолокації ---
     val context = LocalContext.current
@@ -73,6 +77,19 @@ fun AddEditExpenseScreen(
     LaunchedEffect(expense) {
         if (expense?.latitude != null && expense.longitude != null) {
             location = LatLng(expense.latitude, expense.longitude)
+        }
+    }
+
+    LaunchedEffect(qrResult) {
+        if (qrResult != null) {
+            // Це дуже спрощена логіка. Реальні QR-коди з чеків
+            // містять багато даних. Ми шукаємо суму "s="
+            val sumPattern = "s=([0-9]+\\.?[0-9]*)".toRegex()
+            val matchResult = sumPattern.find(qrResult)
+            val sum = matchResult?.groups?.get(1)?.value
+            if (sum != null) {
+                amount = sum
+            }
         }
     }
 
@@ -130,6 +147,11 @@ fun AddEditExpenseScreen(
                 value = amount,
                 onValueChange = { amount = it },
                 label = { Text("Сума*") },
+                trailingIcon = {
+                    IconButton(onClick = { navController.navigate("qr_scanner") }) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Сканувати чек")
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true

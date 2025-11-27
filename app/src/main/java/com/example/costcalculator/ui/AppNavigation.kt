@@ -18,6 +18,7 @@ import com.example.costcalculator.ui.screens.ExpenseDetailScreen
 import com.example.costcalculator.ui.screens.ExpenseTrackerScreen
 import com.example.costcalculator.ui.screens.GroupManagementScreen
 import com.example.costcalculator.ui.screens.MapScreen
+import com.example.costcalculator.ui.screens.QrScannerScreen
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 import com.example.costcalculator.viewmodel.ExpenseViewModelFactory
 
@@ -120,11 +121,14 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 isLoading = false
             }
 
+            val qrResult = backStackEntry.savedStateHandle.get<String>("qr_result")
             if (!isLoading) {
                 AddEditExpenseScreen(
                     expense = expense,
                     categories = categories,
                     groups = groups,
+                    navController = navController, // Передаємо navController
+                    qrResult = qrResult,
                     onSave = { expenseToSave ->
                         if (expenseToSave.id == 0L) {
                             viewModel.addExpense(expenseToSave)
@@ -135,6 +139,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                     },
                     onNavigateBack = { navController.popBackStack() }
                 )
+                backStackEntry.savedStateHandle.remove<String>("qr_result")
             }
         }
 
@@ -162,6 +167,17 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
             GroupManagementScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("qr_scanner") {
+            QrScannerScreen(
+                onQrCodeScanned = { qrResult ->
+                    // Передаємо результат на попередній екран
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("qr_result", qrResult)
+                    navController.popBackStack()
+                }
             )
         }
     }
