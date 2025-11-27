@@ -1,7 +1,10 @@
 package com.example.costcalculator.viewmodel
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.costcalculator.bluetooth.BluetoothController
 import com.example.costcalculator.data.Category
 import com.example.costcalculator.data.ChartData
 import com.example.costcalculator.data.Expense
@@ -11,9 +14,21 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 // ЗМІНА 1: Конструктор тепер приймає репозиторій
-class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() {
+class ExpenseViewModel(
+    private val repository: ExpenseRepository,
+    private val bluetoothAdapter: BluetoothAdapter? // ДОДАНО
+) : ViewModel() {
 
     // ЗМІНА 2: Ми прибрали всю логіку з DAO та init {}
+    private val _bluetoothController = bluetoothAdapter?.let { BluetoothController(it) }
+
+    // Стан для знайдених пристроїв
+    private val _scannedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
+    val scannedDevices: StateFlow<List<BluetoothDevice>> = _scannedDevices.asStateFlow()
+
+    // Стан для отриманої витрати
+    private val _receivedExpense = MutableSharedFlow<Expense>()
+    val receivedExpense: SharedFlow<Expense> = _receivedExpense.asSharedFlow()
 
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     val selectedCategoryId: StateFlow<Long?> = _selectedCategoryId.asStateFlow()
@@ -162,5 +177,55 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun deleteCategory(category: Category) = viewModelScope.launch {
         repository.deleteCategory(category)
+    }
+
+    fun startDiscovery() {
+        _bluetoothController?.startDiscovery()?.onEach { devices ->
+            _scannedDevices.value = devices
+        }?.launchIn(viewModelScope)
+    }
+
+    fun shareExpense(device: BluetoothDevice, expense: Expense) {
+        viewModelScope.launch {
+            _bluetoothController?.connectToServer(device, expense)
+        }
+    }
+
+    fun startReceiving() {
+        _bluetoothController?.startServer()?.onEach { receivedExpense ->
+
+            // 1. Перевіряємо категорію
+            val categoryExists = categories.value.any { it.name.equals(receivedExpense.category, ignoreCase = true) }
+            if (!categoryExists) {
+                // Якщо такої категорії немає, створюємо її
+                addCategory(receivedExpense.category)
+            }
+
+            // 2. Перевіряємо групу (якщо вона була передана)
+            var finalGroupId: Long? = receivedExpense.groupId
+            if (receivedExpense.groupId != null) {
+                // Щоб уникнути конфлікту ID, ми не можемо просто довіряти ID з іншого пристрою.
+                // Ми повинні знайти назву групи і знайти її у себе або створити нову.
+                // Ця логіка складніша, тому для простоти ми поки що будемо
+                // просто скидати групу при передачі.
+                finalGroupId = null // Спрощений варіант: ігноруємо групу при передачі
+            }
+
+            // 3. Створюємо і зберігаємо нову витрату
+            val newExpense = receivedExpense.copy(
+                id = 0, // Завжди 0, щоб база згенерувала новий ID
+                groupId = finalGroupId // Використовуємо перевірений groupId
+            )
+            addExpense(newExpense)
+
+            _receivedExpense.emit(receivedExpense)
+
+        }?.launchIn(viewModelScope)
+    }
+
+    // --- Очистка при знищенні ViewModel ---
+    override fun onCleared() {
+        _bluetoothController?.stop()
+        super.onCleared()
     }
 }

@@ -1,5 +1,8 @@
 package com.example.costcalculator.ui.screens
 
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,21 +10,64 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn // Імпортуйте іконку
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.utils.toCurrencyFormat
 import androidx.compose.ui.text.font.FontWeight
+import com.example.costcalculator.ui.components.BluetoothDeviceDialog
+import com.example.costcalculator.viewmodel.ExpenseViewModel
+import android.Manifest
+import android.bluetooth.BluetoothDevice
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import com.example.costcalculator.ui.components.BluetoothDeviceDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseDetailScreen(
     expense: Expense,
     groupName: String?,
+    viewModel: ExpenseViewModel,
     onNavigateBack: () -> Unit,
     onEdit: () -> Unit
 ) {
+    val scannedDevices by viewModel.scannedDevices.collectAsState()
+    var showDeviceDialog by remember { mutableStateOf(false) }
+
+    // Лаунчер для запиту дозволів
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            if (permissions.values.all { it }) { // Якщо всі дозволи надано
+                viewModel.startDiscovery()
+                showDeviceDialog = true
+            }
+        }
+    )
+
+    // --- UI ---
+    if (showDeviceDialog) {
+        BluetoothDeviceDialog(
+            devices = scannedDevices,
+            onDeviceClick = { device ->
+                viewModel.shareExpense(device, expense)
+                showDeviceDialog = false
+            },
+            onDismiss = { showDeviceDialog = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -32,6 +78,24 @@ fun ExpenseDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        // Список дозволів, які потрібно запитати
+                        val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            )
+                        } else {
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH,
+                                Manifest.permission.BLUETOOTH_ADMIN,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            )
+                        }
+                        permissionLauncher.launch(permissionsToRequest)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Поділитися")
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Редагувати")
                     }

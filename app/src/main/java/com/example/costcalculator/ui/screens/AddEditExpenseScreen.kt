@@ -2,6 +2,7 @@ package com.example.costcalculator.ui.screens
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -23,7 +24,9 @@ import com.example.costcalculator.data.Category
 import com.example.costcalculator.data.Expense
 import com.example.costcalculator.data.ExpenseGroup
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.tasks.CancellationTokenSource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,11 +45,21 @@ fun AddEditExpenseScreen(
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
-            if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
-                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)) {
+            val isGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                    permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+            if (isGranted) {
+                // Дозвіл отримано, запитуємо місцезнаходження
                 getCurrentLocation(fusedLocationClient) { latLng ->
-                    location = latLng
+                    if (latLng != null) {
+                        location = latLng
+                        Toast.makeText(context, "Місцезнаходження отримано!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Не вдалося отримати місцезнаходження.", Toast.LENGTH_SHORT).show()
+                    }
                 }
+            } else {
+                // Користувач відхилив дозвіл
+                Toast.makeText(context, "Дозвіл на доступ до геолокації відхилено.", Toast.LENGTH_LONG).show()
             }
         }
     )
@@ -186,21 +199,13 @@ fun AddEditExpenseScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text(
-                        text = if (location != null) "Місцезнаходження додано" else "Додати місцезнаходження?",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    val currentLocation = location
-                    if (currentLocation != null) {
-                        Text(
-                            text = "Lat: %.4f, Lng: %.4f".format(currentLocation.latitude, currentLocation.longitude),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
+                Text(
+                    text = if (location != null) "Місцезнаходження додано" else "Додати місцезнаходження?",
+                    style = MaterialTheme.typography.bodyLarge
+                )
                 IconButton(
                     onClick = {
+                        // Запускаємо запит дозволів
                         locationPermissionLauncher.launch(
                             arrayOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -222,10 +227,21 @@ fun AddEditExpenseScreen(
 
 // Допоміжна функція для отримання координат (поза @Composable функцією)
 @SuppressLint("MissingPermission")
-private fun getCurrentLocation(fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient, onLocationFetched: (LatLng) -> Unit) {
-    fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+private fun getCurrentLocation(
+    fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient,
+    onLocationFetched: (LatLng?) -> Unit
+) {
+    // Використовуємо getCurrentLocation замість lastLocation для примусового оновлення
+    fusedLocationClient.getCurrentLocation(
+        Priority.PRIORITY_HIGH_ACCURACY,
+        CancellationTokenSource().token
+    ).addOnSuccessListener { loc ->
         if (loc != null) {
             onLocationFetched(LatLng(loc.latitude, loc.longitude))
+        } else {
+            onLocationFetched(null)
         }
+    }.addOnFailureListener {
+        onLocationFetched(null)
     }
 }

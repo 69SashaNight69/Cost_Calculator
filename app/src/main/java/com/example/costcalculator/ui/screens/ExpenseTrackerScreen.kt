@@ -1,5 +1,9 @@
 package com.example.costcalculator.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,6 +22,9 @@ import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.ui.components.ExpenseList
 import com.example.costcalculator.viewmodel.ExpenseViewModel
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,13 +43,52 @@ fun ExpenseTrackerScreen(
     val groups by viewModel.groups.collectAsState()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
     val selectedGroupId by viewModel.selectedGroupId.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() } // Для показу повідомлень
+    val coroutineScope = rememberCoroutineScope()
+
+    // Підписуємось на отримані витрати, щоб показати повідомлення
+    LaunchedEffect(key1 = viewModel) {
+        viewModel.receivedExpense.collect { expense ->
+            snackbarHostState.showSnackbar("Отримано нову витрату: ${expense.amount} грн")
+        }
+    }
+
+    // Лаунчер для дозволів (аналогічно до екрану деталей)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            if (permissions.values.all { it }) {
+                viewModel.startReceiving()
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Режим отримання увімкнено. Очікування...")
+                }
+            }
+        }
+    )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("Калькулятор витрат") },
                 actions = {
+                    IconButton(onClick = {
+                        val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH_ADVERTISE,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            )
+                        } else {
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH,
+                                Manifest.permission.BLUETOOTH_ADMIN
+                            )
+                        }
+                        permissionLauncher.launch(permissionsToRequest)
+                    }) {
+                        Icon(Icons.Default.Bluetooth, contentDescription = "Отримати витрату")
+                    }
                     IconButton(onClick = onMapClick) {
                         Icon(Icons.Default.Map, contentDescription = "Карта")
                     }

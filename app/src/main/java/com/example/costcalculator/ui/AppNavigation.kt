@@ -28,7 +28,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val repository = ExpenseRepository(database.expenseDao(), database.categoryDao(), database.groupDao())
-    val viewModelFactory = ExpenseViewModelFactory(repository)
+    val viewModelFactory = ExpenseViewModelFactory(repository, context)
 
     // Тепер viewModel буде створюватися за допомогою нашої фабрики
     // Це забезпечує, що всі екрани використовують один і той самий екземпляр
@@ -89,6 +89,7 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 ExpenseDetailScreen(
                     expense = expense!!,
                     groupName = groupName, // ДОДАНО: передаємо назву в UI
+                    viewModel = viewModel(factory = viewModelFactory),
                     onNavigateBack = { navController.popBackStack() },
                     onEdit = {
                         navController.navigate("edit_expense?expenseId=${expense!!.id}")

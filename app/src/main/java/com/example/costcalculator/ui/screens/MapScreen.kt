@@ -19,8 +19,6 @@ fun MapScreen(
     viewModel: ExpenseViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // Не хвилюйтеся, якщо `expensesWithLocation` підсвічується червоним.
-    // Ми створимо його на наступному кроці.
     val expensesWithLocation: List<Expense> by viewModel.expensesWithLocation.collectAsState()
 
     // Початкова позиція камери (центр Києва)
