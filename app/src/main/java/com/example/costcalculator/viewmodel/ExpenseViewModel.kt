@@ -12,6 +12,8 @@ import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.data.repository.ExpenseRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.costcalculator.bluetooth.ExpenseDTO
+import kotlinx.coroutines.Dispatchers
 
 // ЗМІНА 1: Конструктор тепер приймає репозиторій
 class ExpenseViewModel(
@@ -163,8 +165,41 @@ class ExpenseViewModel(
         repository.updateExpense(expense)
     }
 
-    fun deleteExpense(expense: Expense) = viewModelScope.launch {
-        repository.deleteExpense(expense)
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            repository.deleteExpense(expense)
+
+            launch(Dispatchers.IO) {
+                // 1. Перевірка категорії
+                // Отримуємо всі витрати, що ще залишились з цією категорією
+                val otherExpensesInCategory = repository.getAllExpenses().first()
+                    .count { it.category.equals(expense.category, ignoreCase = true) }
+
+                // Якщо інших витрат з цією категорією немає (count == 0)
+                if (otherExpensesInCategory == 0) {
+                    // Знаходимо саму категорію в нашому списку і видаляємо її
+                    repository.getAllCategories().first()
+                        .find { it.name.equals(expense.category, ignoreCase = true) }
+                        ?.let { categoryToDelete ->
+                            repository.deleteCategory(categoryToDelete)
+                        }
+                }
+
+                // 2. Перевірка групи (аналогічно)
+                expense.groupId?.let { groupId ->
+                    val otherExpensesInGroup = repository.getAllExpenses().first()
+                        .count { it.groupId == groupId }
+
+                    if (otherExpensesInGroup == 0) {
+                        repository.getAllGroups().first()
+                            .find { it.id == groupId }
+                            ?.let { groupToDelete ->
+                                repository.deleteGroup(groupToDelete)
+                            }
+                    }
+                }
+            }
+        }
     }
 
     suspend fun getExpenseById(id: Long): Expense? {
@@ -187,39 +222,54 @@ class ExpenseViewModel(
 
     fun shareExpense(device: BluetoothDevice, expense: Expense) {
         viewModelScope.launch {
-            _bluetoothController?.connectToServer(device, expense)
+            // 1. Знаходимо назву групи
+            val groupName = expense.groupId?.let { id ->
+                groups.value.find { it.id == id }?.name
+            }
+            // 2. Створюємо DTO з усіма потрібними даними
+            val expenseDto = ExpenseDTO(
+                amount = expense.amount,
+                category = expense.category,
+                description = expense.description,
+                groupName = groupName,
+                latitude = expense.latitude,
+                longitude = expense.longitude
+            )
+            // 3. Відправляємо DTO
+            _bluetoothController?.connectToServer(device, expenseDto)
         }
     }
 
     fun startReceiving() {
-        _bluetoothController?.startServer()?.onEach { receivedExpense ->
+        _bluetoothController?.startServer()?.onEach { receivedDto ->
+            // --- НАДІЙНА ЛОГІКА ---
+            viewModelScope.launch {
+                // Крок 1: Переконуємось, що категорія існує, і отримуємо її об'єкт з ID
+                // Нам потрібна лише назва для збереження у витраті, але цей крок гарантує,
+                // що категорія буде у фільтрах.
+                val category = repository.findOrCreateCategory(receivedDto.category)
 
-            // 1. Перевіряємо категорію
-            val categoryExists = categories.value.any { it.name.equals(receivedExpense.category, ignoreCase = true) }
-            if (!categoryExists) {
-                // Якщо такої категорії немає, створюємо її
-                addCategory(receivedExpense.category)
+                // Крок 2: Переконуємось, що група існує, і отримуємо її об'єкт з ID
+                var finalGroupId: Long? = null
+                if (receivedDto.groupName != null) {
+                    val group = repository.findOrCreateGroup(receivedDto.groupName)
+                    finalGroupId = group.id
+                }
+
+                // Крок 3: Тепер, коли всі довідники готові, створюємо і зберігаємо витрату
+                val newExpense = Expense(
+                    id = 0,
+                    amount = receivedDto.amount,
+                    category = category.name, // Беремо назву з отриманого/створеного об'єкта
+                    description = receivedDto.description, // Опис передається напряму
+                    groupId = finalGroupId, // Тепер у нас є гарантований ID
+                    latitude = receivedDto.latitude,
+                    longitude = receivedDto.longitude
+                )
+                repository.insertExpense(newExpense)
+
+                // _receivedExpense.emit(newExpense) // Повідомляємо UI (опціонально)
             }
-
-            // 2. Перевіряємо групу (якщо вона була передана)
-            var finalGroupId: Long? = receivedExpense.groupId
-            if (receivedExpense.groupId != null) {
-                // Щоб уникнути конфлікту ID, ми не можемо просто довіряти ID з іншого пристрою.
-                // Ми повинні знайти назву групи і знайти її у себе або створити нову.
-                // Ця логіка складніша, тому для простоти ми поки що будемо
-                // просто скидати групу при передачі.
-                finalGroupId = null // Спрощений варіант: ігноруємо групу при передачі
-            }
-
-            // 3. Створюємо і зберігаємо нову витрату
-            val newExpense = receivedExpense.copy(
-                id = 0, // Завжди 0, щоб база згенерувала новий ID
-                groupId = finalGroupId // Використовуємо перевірений groupId
-            )
-            addExpense(newExpense)
-
-            _receivedExpense.emit(receivedExpense)
-
         }?.launchIn(viewModelScope)
     }
 

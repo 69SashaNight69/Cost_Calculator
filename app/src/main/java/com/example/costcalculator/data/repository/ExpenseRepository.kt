@@ -7,6 +7,7 @@ import com.example.costcalculator.data.ExpenseDao
 import com.example.costcalculator.data.ExpenseGroup
 import com.example.costcalculator.data.ExpenseGroupDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 // Репозиторій приймає DAO як параметри
 class ExpenseRepository(
@@ -53,5 +54,32 @@ class ExpenseRepository(
 
     suspend fun deleteGroup(group: ExpenseGroup) {
         groupDao.delete(group)
+    }
+    suspend fun findOrCreateCategory(categoryName: String): Category {
+        val existingCategory = categoryDao.getAllCategories().first()
+            .find { it.name.equals(categoryName, ignoreCase = true) }
+
+        return if (existingCategory != null) {
+            existingCategory
+        } else {
+            val newCategory = Category(name = categoryName)
+            categoryDao.insert(newCategory)
+            // Робимо ще один запит, щоб отримати об'єкт з уже згенерованим ID
+            categoryDao.getAllCategories().first().find { it.name.equals(categoryName, ignoreCase = true) }!!
+        }
+    }
+
+    // Робить те ж саме для групи
+    suspend fun findOrCreateGroup(groupName: String): ExpenseGroup {
+        val existingGroup = groupDao.getAllGroups().first()
+            .find { it.name.equals(groupName, ignoreCase = true) }
+
+        return if (existingGroup != null) {
+            existingGroup
+        } else {
+            val newGroup = ExpenseGroup(name = groupName, description = null)
+            groupDao.insert(newGroup)
+            groupDao.getAllGroups().first().find { it.name.equals(groupName, ignoreCase = true) }!!
+        }
     }
 }

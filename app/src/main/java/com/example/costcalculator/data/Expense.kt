@@ -3,9 +3,9 @@ package com.example.costcalculator.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "expenses") // Вказуємо назву таблиці
+@Entity(tableName = "expenses")
 data class Expense(
-    @PrimaryKey(autoGenerate = true) // Робимо id первинним ключем, який генерується автоматично
+    @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val amount: Double,
     val category: String,

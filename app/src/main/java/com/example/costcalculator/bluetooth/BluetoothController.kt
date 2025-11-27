@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
+import android.util.Log
 import com.example.costcalculator.data.Expense
 import com.google.gson.Gson // Використовуємо GSON
 import kotlinx.coroutines.Dispatchers
@@ -29,35 +30,42 @@ class BluetoothController(private val bluetoothAdapter: BluetoothAdapter) {
     }.flowOn(Dispatchers.IO)
 
     // Режим "Сервера" (очікування даних)
-    fun startServer(): Flow<Expense> = flow {
+    fun startServer(): Flow<ExpenseDTO> = flow {
         serverSocket = bluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord("CostCalculator", uuid)
-        val socket = serverSocket?.accept() // Чекаємо, поки хтось підключиться
+        val socket = serverSocket?.accept()
         if (socket != null) {
             val inputStream = socket.inputStream
             val buffer = ByteArray(1024)
             val bytes = inputStream.read(buffer)
             val jsonString = String(buffer, 0, bytes)
-            // Використовуємо GSON для перетворення тексту в об'єкт
-            val expense = Gson().fromJson(jsonString, Expense::class.java)
-            emit(expense)
+            // ЗМІНЕНО: GSON тепер створює ExpenseDTO
+            val expenseDto = Gson().fromJson(jsonString, ExpenseDTO::class.java)
+            emit(expenseDto)
             socket.close()
         }
     }.flowOn(Dispatchers.IO)
 
-    // Режим "Клієнта" (відправка даних)
-    suspend fun connectToServer(device: BluetoothDevice, expense: Expense) {
+    // ЗМІНЕНО: тепер функція приймає ExpenseDTO
+    suspend fun connectToServer(device: BluetoothDevice, expenseDto: ExpenseDTO) {
         withContext(Dispatchers.IO) {
             try {
                 clientSocket = device.createRfcommSocketToServiceRecord(uuid)
                 clientSocket?.connect()
                 val outputStream = clientSocket?.outputStream
-                // Використовуємо GSON для перетворення об'єкта в текст
-                val jsonString = Gson().toJson(expense)
+                // ЗМІНЕНО: GSON перетворює на JSON об'єкт ExpenseDTO
+                val jsonString = Gson().toJson(expenseDto)
                 outputStream?.write(jsonString.toByteArray())
             } catch (e: IOException) {
-                e.printStackTrace()
-            } finally {
-                clientSocket?.close()
+                Log.e("BluetoothClient", "Помилка під час відправки даних: ${e.message}", e)
+
+                // Можеш показати користувачу Toast
+                // Toast.makeText(context, "Не вдалося підключитись до пристрою", Toast.LENGTH_SHORT).show()
+
+                try {
+                    clientSocket?.close()
+                } catch (closeException: IOException) {
+                    Log.e("BluetoothClient", "Помилка при закритті сокету: ${closeException.message}", closeException)
+                }
             }
         }
     }
