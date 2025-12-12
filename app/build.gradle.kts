@@ -67,6 +67,7 @@ dependencies {
     // Room (База даних)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.appcompat)
     ksp(libs.androidx.room.compiler)
 
     // Navigation
@@ -101,5 +102,6 @@ dependencies {
     implementation("androidx.camera:camera-view:1.4.0-beta01")
     implementation("androidx.camera:camera-extensions:1.4.0-beta01")
     implementation("androidx.camera:camera-compose:1.5.1")
-
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

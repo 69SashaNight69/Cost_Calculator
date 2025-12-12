@@ -1,6 +1,7 @@
 package com.example.costcalculator.ui
 
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -17,6 +18,7 @@ import com.example.costcalculator.ui.screens.CategoryManagementScreen
 import com.example.costcalculator.ui.screens.ExpenseDetailScreen
 import com.example.costcalculator.ui.screens.ExpenseTrackerScreen
 import com.example.costcalculator.ui.screens.GroupManagementScreen
+import com.example.costcalculator.ui.screens.LockScreen
 import com.example.costcalculator.ui.screens.MapScreen
 import com.example.costcalculator.ui.screens.QrScannerScreen
 import com.example.costcalculator.viewmodel.ExpenseViewModel
@@ -36,6 +38,14 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
     val viewModel: ExpenseViewModel = viewModel(factory = viewModelFactory)
 
     val navController = rememberNavController()
+    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+
+    if (isAuthenticated) {
+        // --- Якщо користувач увійшов, показуємо основний додаток ---
+        val context = LocalContext.current
+        // ... ваш код для створення viewModelFactory ...
+        val viewModel: ExpenseViewModel = viewModel(factory = viewModelFactory)
+        val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "expense_list") {
         // Маршрут №1: Екран зі списком витрат
@@ -180,5 +190,9 @@ fun AppNavigation() { // ЗМІНА 1: Прибрали viewModel з парам�
                 }
             )
         }
+    }
+    } else {
+        // --- Якщо користувач ще не увійшов, показуємо екран блокування ---
+        LockScreen(onAuthenticated = { isAuthenticated = true })
     }
 }
