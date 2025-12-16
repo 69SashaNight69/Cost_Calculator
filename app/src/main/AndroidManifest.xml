@@ -42,7 +42,7 @@
         </activity>
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyC-Cg7OLWOmRd4y9UeG-Rr-z4THQSwcT9I" />
+            android:value="AIzaSyC" />
     </application>
 
 </manifest>
